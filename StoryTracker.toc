@@ -1,0 +1,9 @@
+## Interface: 110000
+## Title: StoryTracker (Retail)
+## Notes: Records your Retail WoW adventures for storytelling
+## Author: Tim
+## Version: 1.0.0
+## SavedVariables: StoryTrackerDB
+
+core.lua
+events.lua
