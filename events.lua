@@ -11,8 +11,8 @@ local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 -- this large (copper); every change still counts toward session totals.
 local MONEY_EVENT_THRESHOLD = 10000 -- 1 gold
 
--- Damage taken older than this is not blamed for a death.
-local KILLER_WINDOW_SECONDS = 15
+-- Seconds to wait after PLAYER_DEAD before reading the death recap.
+local KILLER_RECAP_DELAY = 1
 
 -- QUEST_REMOVED fires for turn-ins as well as abandons, and its order
 -- relative to QUEST_TURNED_IN isn't guaranteed; wait this long before
@@ -71,8 +71,7 @@ local state = {
     completingTitle = nil,
     instance = nil,      -- { name, type, maxPlayers, enteredAt }
     bgWinnerRecorded = false,
-    lastDamage = nil,    -- { source, ability, amount, time }
-    notableTargets = {}, -- [guid] = { name, classification, level, engaged }
+    notableTarget = nil, -- { guid, name, classification, level }, current target only
     equipment = {},      -- [slot] = itemLink
     equippedSeen = {},   -- [itemID] = true, items already worn this session
 }
@@ -462,85 +461,99 @@ end
 -- Combat: deaths and notable kills
 ------------------------------------------------------------------------
 
-local AFFILIATION_FRIENDLY = bit.bor(
-    COMBATLOG_OBJECT_AFFILIATION_MINE or 0x1,
-    COMBATLOG_OBJECT_AFFILIATION_PARTY or 0x2,
-    COMBATLOG_OBJECT_AFFILIATION_RAID or 0x4)
+-- Midnight (12.x) removed the combat log for addons. Kills are detected
+-- with a unit-filtered UNIT_DIED on the target, and killers come from
+-- the death recap.
 
-function H.COMBAT_LOG_EVENT_UNFILTERED()
-    local _, subevent, _, sourceGUID, sourceName, sourceFlags, _, destGUID, destName,
-        _, _, a12, a13, a14, a15 = CombatLogGetCurrentEventInfo()
-
-    if destGUID == playerGUID then
-        local ability, amount
-        if subevent == "SWING_DAMAGE" then
-            ability, amount = "Melee", a12
-        elseif subevent == "RANGE_DAMAGE" or subevent == "SPELL_DAMAGE"
-            or subevent == "SPELL_PERIODIC_DAMAGE" then
-            ability, amount = a13, a15
-        elseif subevent == "ENVIRONMENTAL_DAMAGE" then
-            ability, amount = a12, a13
-            sourceName = "Environment"
-        end
-        if ability then
-            state.lastDamage = {
-                source = sourceName,
-                ability = ability,
-                amount = amount,
-                time = time(),
-            }
-        end
-        return
-    end
-
-    local notable = state.notableTargets[destGUID]
-    if not notable then return end
-    if subevent:find("_DAMAGE$") and sourceFlags
-        and bit.band(sourceFlags, AFFILIATION_FRIENDLY) ~= 0 then
-        notable.engaged = true
-    elseif (subevent == "UNIT_DIED" or subevent == "PARTY_KILL") and notable.engaged then
-        state.notableTargets[destGUID] = nil
-        ST:RecordEvent("NOTABLE_KILL", {
-            name = notable.name or destName,
-            classification = notable.classification,
-            level = notable.level,
-        })
-    end
+-- Midnight can hand addons "secret" values that must not be stored or
+-- compared; drop them rather than persisting them.
+local function Plain(value)
+    if issecretvalue and issecretvalue(value) then return nil end
+    return value
 end
 
--- Remember elites/rares/world bosses the player targets so their death
--- can be recorded. Elites inside dungeons are skipped (that's just trash;
--- bosses come through ENCOUNTER_END).
+local function StopWatchingTarget()
+    state.notableTarget = nil
+    ST.frame:UnregisterEvent("UNIT_DIED")
+end
+
+-- Watch an elite/rare/world boss the player targets so its death can be
+-- recorded. Elites inside dungeons are skipped (that's just trash;
+-- bosses come through ENCOUNTER_END). Only the current target is
+-- watched: switching away from a notable enemy stops tracking it.
 function H.PLAYER_TARGET_CHANGED()
+    StopWatchingTarget()
     if not UnitExists("target") or UnitIsPlayer("target") or UnitIsDead("target") then return end
     if not UnitCanAttack("player", "target") then return end
     local classification = UnitClassification("target")
     if not NOTABLE_CLASSIFICATIONS[classification] then return end
     local inInstance = IsInInstance()
     if inInstance and classification == "elite" then return end
-    local guid = UnitGUID("target")
-    if not guid or state.notableTargets[guid] then return end
-    state.notableTargets[guid] = {
-        name = UnitName("target"),
+    local guid = Plain(UnitGUID("target"))
+    if not guid then return end
+    -- RegisterUnitEvent takes unit tokens, not GUIDs; the GUID is checked
+    -- when the event fires. Older clients have no UNIT_DIED event.
+    if not pcall(ST.frame.RegisterUnitEvent, ST.frame, "UNIT_DIED", "target") then return end
+    state.notableTarget = {
+        guid = guid,
+        name = Plain(UnitName("target")),
         classification = classification,
-        level = UnitLevel("target"),
-        engaged = false,
+        level = Plain(UnitLevel("target")),
     }
+end
+
+-- Registered per unit by PLAYER_TARGET_CHANGED, never globally.
+function H.UNIT_DIED(unit)
+    local notable = state.notableTarget
+    if not notable then return end
+    local guid = unit == notable.guid and unit or Plain(UnitGUID(unit or "target"))
+    if guid ~= notable.guid then return end
+    StopWatchingTarget()
+    -- A tapped mob was killed by someone else's group; the combat log's
+    -- "we damaged it" check is gone, so tap ownership stands in for it.
+    if UnitIsTapDenied and Plain(UnitIsTapDenied(unit or "target")) then return end
+    ST:RecordEvent("NOTABLE_KILL", {
+        name = notable.name,
+        classification = notable.classification,
+        level = notable.level,
+    })
+end
+ST.unitEvents = ST.unitEvents or {}
+ST.unitEvents.UNIT_DIED = true
+
+-- Fill killer fields from the most recent death recap. Entry 1 is the
+-- killing blow; fields may be missing or secret, in which case they're
+-- left out.
+local function AddKillerFromRecap(data)
+    if not (C_DeathRecap and C_DeathRecap.GetRecapEvents) then return end
+    if C_DeathRecap.HasRecapEvents and not C_DeathRecap.HasRecapEvents() then return end
+    local ok, events = pcall(C_DeathRecap.GetRecapEvents)
+    local hit = ok and type(events) == "table" and events[1]
+    if type(hit) ~= "table" then return end
+    local subevent = Plain(hit.event)
+    if subevent == "ENVIRONMENTAL_DAMAGE" then
+        data.killer = "Environment"
+        data.killingBlow = Plain(hit.environmentalType)
+    else
+        data.killer = Plain(hit.sourceName)
+        data.killingBlow = Plain(hit.spellName) or (subevent == "SWING_DAMAGE" and "Melee" or nil)
+    end
+    data.damage = Plain(hit.amount)
 end
 
 function H.PLAYER_DEAD()
     local data = { subzone = SubZone(), level = UnitLevel("player") }
-    local hit = state.lastDamage
-    if hit and (time() - hit.time) <= KILLER_WINDOW_SECONDS then
-        data.killer = hit.source
-        data.killingBlow = hit.ability
-        data.damage = hit.amount
-    end
     if state.instance then
         data.instanceName = state.instance.name
     end
     ST:RecordEvent("PLAYER_DEAD", data)
-    state.lastDamage = nil
+    -- The recap may not be built yet when PLAYER_DEAD fires; fill the
+    -- already-recorded entry in shortly after.
+    if C_Timer and C_Timer.After then
+        C_Timer.After(KILLER_RECAP_DELAY, function() AddKillerFromRecap(data) end)
+    else
+        AddKillerFromRecap(data)
+    end
 end
 
 ------------------------------------------------------------------------

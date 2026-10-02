@@ -173,8 +173,11 @@ local function SafeRegister(event)
 end
 
 function ST:RegisterHandlers()
+    -- Unit events (ST.unitEvents) are registered per unit by their
+    -- handlers; a global RegisterEvent would override that filter.
+    local unitEvents = self.unitEvents or {}
     for event in pairs(self.handlers) do
-        if not core[event] then
+        if not core[event] and not unitEvents[event] then
             SafeRegister(event)
         end
     end
