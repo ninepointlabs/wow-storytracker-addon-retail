@@ -1,7 +1,7 @@
 ## Interface: 120100
 ## Title: StoryTracker (Retail)
 ## Notes: Records your Retail WoW adventures for storytelling
-## Author: Tim
+## Author: Nine Point Labs
 ## Version: 1.1.1
 ## SavedVariables: StoryTrackerDB
 

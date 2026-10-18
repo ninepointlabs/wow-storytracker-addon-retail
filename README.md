@@ -55,13 +55,20 @@ to an AI that composes narrative blog posts at [myazerothlife.com](https://myaze
 ## Slash Commands
 
 - `/storytracker` — show event and session count
+- `/storytracker about` — print version, license, support address (with a version line to paste into your email), privacy details, and your WoW client build
 - `/storytracker debug` — toggle debug mode
 
 ## License
 
-MIT © 2026 Tim
+MIT © 2026 Nine Point Labs
 
 ## Privacy
 
-All data stays on your machine. The SavedVariables file never leaves your
-computer. Blog posts are generated locally by your own AI agent.
+StoryTracker has no network access (WoW addons can't use the internet). It
+records the categories above for your own character, saved by WoW to
+`WTF/Account/<account>/SavedVariables/StoryTracker.lua`. Other players' names
+are saved only from your group roster, party level-ups, duels, honorable kills,
+and death recaps; no player chat is read or saved. The file stays on your
+computer — nothing leaves it unless you run the companion tool or share the
+file yourself. To clear it, log out and delete that file (and
+`StoryTracker.lua.bak`). `/storytracker about` prints the same summary in game.

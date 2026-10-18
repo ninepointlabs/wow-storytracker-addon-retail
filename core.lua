@@ -204,12 +204,50 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_LOGOUT")
 
+-- /storytracker about. Version and tagline come from the TOC at runtime.
+local SUPPORT_EMAIL = "help@ninepointlabs.com"
+local CREATED = "October 2026" -- month of the first commit, 2026-10-02
+
+local function Metadata(field)
+    local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    local value = get and get(addonName, field)
+    return value ~= "" and value or nil
+end
+
+function ST:PrintAbout()
+    local title = Metadata("Title") or "StoryTracker (Retail)"
+    local version = Metadata("Version") or "unknown"
+    local wowVersion, build, _, interface = GetBuildInfo()
+    local client = string.format("WoW %s build %s (interface %s)",
+        tostring(wowVersion), tostring(build), tostring(interface))
+    local lines = {
+        "|cffffd100" .. title .. "|r " .. version,
+        Metadata("Notes") or "Records your Retail WoW adventures for storytelling",
+        "Made by Nine Point Labs. Created " .. CREATED .. ".",
+        "License: MIT License, Copyright (c) 2026 Nine Point Labs. Full text: the LICENSE file in the addon's folder (Interface/AddOns/StoryTracker).",
+        "Support: " .. SUPPORT_EMAIL .. " - please include this line:",
+        string.format("%s %s, %s, %s", title, version, client, GetLocale and GetLocale() or "unknown locale"),
+        "Privacy: StoryTracker has no network access. It saves to WTF/Account/<account>/SavedVariables/StoryTracker.lua (StoryTrackerDB), written by WoW on logout or /reload.",
+        "Per character it records your name, realm, class, race, level, faction and guild; session times, zones and gold; quests, levels, deaths (and what killed you), dungeons, bosses, notable kills, rare+ loot, gear, mounts, transmog, achievements, reputation, professions, spells, PvP results, and guild and group changes.",
+        "Other players' names are saved only from your group roster, party level-ups, duels, honorable kills and death recaps. No player chat is read or saved.",
+        "The file stays on your computer; nothing leaves it unless you run the companion tool or share the file yourself. To clear it, log out and delete that file (and StoryTracker.lua.bak).",
+        "Built with: " .. client .. ".",
+    }
+    for _, line in ipairs(lines) do
+        print(line)
+    end
+end
+
 SLASH_STORYTRACKER1 = "/storytracker"
 SlashCmdList["STORYTRACKER"] = function(msg)
     msg = (msg or ""):lower()
     if msg == "debug" then
         ST.debug = not ST.debug
         print("StoryTracker debug: " .. (ST.debug and "on" or "off"))
+        return
+    end
+    if msg == "about" then
+        ST:PrintAbout()
         return
     end
     local char = ST.char
@@ -219,4 +257,5 @@ SlashCmdList["STORYTRACKER"] = function(msg)
     end
     print(string.format("StoryTracker v%d: %s — %d events, %d sessions recorded",
         ST.DB_VERSION, ST.charKey, #char.events, #char.sessions))
+    print("StoryTracker commands: /storytracker about, /storytracker debug")
 end
