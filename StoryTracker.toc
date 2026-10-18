@@ -2,7 +2,7 @@
 ## Title: StoryTracker (Retail)
 ## Notes: Records your Retail WoW adventures for storytelling
 ## Author: Nine Point Labs
-## Version: 1.1.1
+## Version: 1.1.2
 ## SavedVariables: StoryTrackerDB
 
 core.lua
