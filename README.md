@@ -60,7 +60,7 @@ to an AI that composes narrative blog posts at [myazerothlife.com](https://myaze
 
 ## License
 
-MIT © 2026 Tim
+MIT © 2026 Nine Point Labs
 
 ## Privacy
 

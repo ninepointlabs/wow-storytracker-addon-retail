@@ -224,7 +224,7 @@ function ST:PrintAbout()
         "|cffffd100" .. title .. "|r " .. version,
         Metadata("Notes") or "Records your Retail WoW adventures for storytelling",
         "Made by Nine Point Labs. Created " .. CREATED .. ".",
-        "License: MIT License, Copyright (c) 2026 Tim. Full text: the LICENSE file in the addon's folder (Interface/AddOns/StoryTracker).",
+        "License: MIT License, Copyright (c) 2026 Nine Point Labs. Full text: the LICENSE file in the addon's folder (Interface/AddOns/StoryTracker).",
         "Support: " .. SUPPORT_EMAIL .. " - please include this line:",
         string.format("%s %s, %s, %s", title, version, client, GetLocale and GetLocale() or "unknown locale"),
         "Privacy: StoryTracker has no network access. It saves to WTF/Account/<account>/SavedVariables/StoryTracker.lua (StoryTrackerDB), written by WoW on logout or /reload.",
