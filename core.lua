@@ -206,7 +206,7 @@ frame:RegisterEvent("PLAYER_LOGOUT")
 
 -- /storytracker about. Version and tagline come from the TOC at runtime.
 local SUPPORT_EMAIL = "help@ninepointlabs.com"
-local CREATED = "2026-10-02"
+local CREATED = "October 2026" -- month of the first commit, 2026-10-02
 
 local function Metadata(field)
     local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata

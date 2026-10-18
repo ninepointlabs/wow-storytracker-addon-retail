@@ -21,7 +21,7 @@ local text = table.concat(out, "\n")
 local function expect(s) assert(text:find(s, 1, true), "missing: " .. s .. "\n--- output ---\n" .. text) end
 expect("StoryTracker (Retail)|r 9.9.9")
 expect("Test notes")
-expect("Made by Nine Point Labs. Created 2026-10-02.")
+expect("Made by Nine Point Labs. Created October 2026.")
 expect("MIT License")
 expect("help@ninepointlabs.com")
 expect("StoryTracker (Retail) 9.9.9, WoW 12.0.1 build 65000 (interface 120001), enUS")
