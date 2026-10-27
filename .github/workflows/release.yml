@@ -1,0 +1,28 @@
+name: Release
+
+# On a version tag, the BigWigs packager builds the zip, writes release.json
+# (which tells addon managers such as OmaForge which game flavor the zip is
+# for) and attaches both to the GitHub release for the tag.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: BigWigsMods/packager@v2
+        with:
+          args: -u -n "{package-name}-Retail-{project-version}"
+          pandoc: false
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
