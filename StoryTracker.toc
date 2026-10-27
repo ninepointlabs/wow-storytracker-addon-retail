@@ -1,9 +1,9 @@
-## Interface: 120100
+## Interface: 120105
 ## Title: StoryTracker (Retail)
 ## Notes: Records your Retail WoW adventures for storytelling
 ## Author: Nine Point Labs
 ## X-Website: https://github.com/ninepointlabs/wow-storytracker-addon-retail
-## Version: 1.1.4
+## Version: 1.1.5
 ## SavedVariables: StoryTrackerDB
 
 core.lua
