@@ -141,6 +141,7 @@ function core.ADDON_LOADED(loadedName)
     InitDB()
     InitCharacter()
     frame:UnregisterEvent("ADDON_LOADED")
+    if ST.InitScreenshots then ST:InitScreenshots() end
     ST:RegisterHandlers()
     return true
 end
@@ -228,6 +229,7 @@ function ST:PrintAbout()
         "Support: " .. SUPPORT_EMAIL .. " - please include this line:",
         string.format("%s %s, %s, %s", title, version, client, GetLocale and GetLocale() or "unknown locale"),
         "Privacy: StoryTracker has no network access. It saves to WTF/Account/<account>/SavedVariables/StoryTracker.lua (StoryTrackerDB), written by WoW on logout or /reload.",
+        "Screenshots: StoryTracker takes screenshots at story moments (WoW saves them to its Screenshots folder) and logs when and where each was taken. /storytracker shots to change or turn off.",
         "Per character it records your name, realm, class, race, level, faction and guild; session times, zones and gold; quests, levels, deaths (and what killed you), dungeons, bosses, notable kills, rare+ loot, gear, mounts, transmog, achievements, reputation, professions, spells, PvP results, and guild and group changes.",
         "Other players' names are saved only from your group roster, party level-ups, duels, honorable kills and death recaps. No player chat is read or saved.",
         "The file stays on your computer; nothing leaves it unless you run the companion tool or share the file yourself. To clear it, log out and delete that file (and StoryTracker.lua.bak).",
@@ -241,6 +243,11 @@ end
 SLASH_STORYTRACKER1 = "/storytracker"
 SlashCmdList["STORYTRACKER"] = function(msg)
     msg = (msg or ""):lower()
+    local shotsArgs = msg:match("^shots%s*(.*)$")
+    if shotsArgs and ST.ScreenshotCommand then
+        ST:ScreenshotCommand(shotsArgs)
+        return
+    end
     if msg == "debug" then
         ST.debug = not ST.debug
         print("StoryTracker debug: " .. (ST.debug and "on" or "off"))
@@ -257,5 +264,5 @@ SlashCmdList["STORYTRACKER"] = function(msg)
     end
     print(string.format("StoryTracker v%d: %s — %d events, %d sessions recorded",
         ST.DB_VERSION, ST.charKey, #char.events, #char.sessions))
-    print("StoryTracker commands: /storytracker about, /storytracker debug")
+    print("StoryTracker commands: /storytracker about, /storytracker debug, /storytracker shots")
 end

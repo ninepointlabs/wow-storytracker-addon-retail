@@ -52,9 +52,49 @@ A companion tool (in the [storytracker repo](https://github.com/ninepointlabs/wo
 reads that file, detects new events since the last report, and feeds them
 to an AI that composes narrative blog posts at [myazerothlife.com](https://myazerothlife.com).
 
+## Screenshots
+
+StoryTracker takes a screenshot (WoW's own `Screenshot()`, saved to the
+game's `Screenshots` folder) about 0.75 s after each story moment, so blog
+posts can use them:
+
+- quest turn-in
+- level up
+- achievement earned
+- boss kill (successful `ENCOUNTER_END`)
+- first visit to a zone (tracked per character; zones already in your
+  history count as visited)
+- other story moments: entering a dungeon or battleground, battleground
+  result, notable (rare/elite) kills, new mounts, epic or better loot,
+  duels, joining a guild, reputation standing increases, and deaths
+- optionally every 15 minutes, only when you're out of combat, not on a
+  loading screen and not AFK
+
+At most one screenshot is taken per 20 seconds; when two moments land
+together (a turn-in that dings) the shot is labelled with the bigger one.
+With "hide UI" on, the interface is hidden for the shot when you're out of
+combat; in combat it is never touched.
+
+Each shot is logged to `StoryTrackerDB.screenshotLog` with its time, the
+`WoWScrnShot_MMDDYY_HHMMSS` file name WoW gives it, what happened, the zone
+and subzone, and the character's name, realm and level. Entries older than
+30 days are dropped from the log.
+
+**Addons cannot delete files**, so StoryTracker never removes screenshots.
+Clean up the `Screenshots` folder outside the game.
+
 ## Slash Commands
 
 - `/storytracker` — show event and session count
+- `/storytracker shots` — show screenshot settings
+- `/storytracker shots on|off` — turn auto-screenshots on or off (default on)
+- `/storytracker shots <event> on|off` — per event: `quest`, `levelup`,
+  `achievement`, `boss`, `newzone`, `story` (all default on)
+- `/storytracker shots timer on|off|<minutes>` — timed shots (default on,
+  every 15 minutes; 1-120)
+- `/storytracker shots hideui on|off` — hide the UI for shots when out of
+  combat (default off)
+- `/storytracker shots log` — show the last few logged screenshots
 - `/storytracker about` — print version, license, support address (with a version line to paste into your email), privacy details, and your WoW client build
 - `/storytracker debug` — toggle debug mode
 
@@ -68,7 +108,8 @@ StoryTracker has no network access (WoW addons can't use the internet). It
 records the categories above for your own character, saved by WoW to
 `WTF/Account/<account>/SavedVariables/StoryTracker.lua`. Other players' names
 are saved only from your group roster, party level-ups, duels, honorable kills,
-and death recaps; no player chat is read or saved. The file stays on your
-computer — nothing leaves it unless you run the companion tool or share the
+and death recaps; no player chat is read or saved.
+Screenshots are saved by WoW to its `Screenshots` folder; the log records
+when and where each was taken. The file stays on your computer — nothing leaves it unless you run the companion tool or share the
 file yourself. To clear it, log out and delete that file (and
 `StoryTracker.lua.bak`). `/storytracker about` prints the same summary in game.
