@@ -1,0 +1,5 @@
+package-as: StoryTracker
+
+ignore:
+  - README.md
+  - tests
